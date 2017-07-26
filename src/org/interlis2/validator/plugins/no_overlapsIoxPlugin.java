@@ -48,6 +48,7 @@ public class no_overlapsIoxPlugin implements InterlisFunction {
 							Polygon iteratedPolygon = Iox2jts
 									.surface2JTS(iomObj.getattrobj(actualArguments[1].getValue(), 0), 0);
 
+							//check if mainObj (this object) overlaps any other object
 							isValid &= !(currentObjectPolygon.overlaps(iteratedPolygon));
 						}
 					}
