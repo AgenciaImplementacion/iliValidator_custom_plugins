@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<classpath>
+	<classpathentry kind="src" path="src"/>
+	<classpathentry kind="con" path="org.eclipse.jdt.launching.JRE_CONTAINER"/>
+	<classpathentry kind="lib" path="lib/antlr.jar"/>
+	<classpathentry kind="lib" path="lib/ehibasics.jar"/>
+	<classpathentry kind="lib" path="lib/gson-2.6.2.jar"/>
+	<classpathentry kind="lib" path="lib/ili2c-core.jar"/>
+	<classpathentry kind="lib" path="lib/ili2c-tool.jar"/>
+	<classpathentry kind="lib" path="lib/iox-api.jar"/>
+	<classpathentry kind="lib" path="lib/iox-ili.jar"/>
+	<classpathentry kind="lib" path="lib/jts-core-1.14.0.jar"/>
+	<classpathentry kind="lib" path="lib/toml4j-0.5.1.jar"/>
+	<classpathentry kind="output" path="bin"/>
+</classpath>
