@@ -29,175 +29,178 @@ import ch.interlis.iox_j.validator.Value;
 
 public class no_overlaps_2_2_0_IoxPlugin implements InterlisFunction {
 
-	public static final String POLYLINE_TYPE = "PolylineType";
-	public static final String SURFACE_OR_AREA_TYPE = "SurfaceOrAreaType";
-	public static final String COORD_TYPE = "CoordType";
+    public static final String POLYLINE_TYPE = "PolylineType";
+    public static final String SURFACE_OR_AREA_TYPE = "SurfaceOrAreaType";
+    public static final String COORD_TYPE = "CoordType";
 
-	private LogEventFactory logger = null;
-	private ObjectPool objectPool = null;
-	/**
-	 * mappings from xml-tags to Viewable|AttributeDef
-	 */
-	private HashMap tag2class = null;
+    private LogEventFactory logger = null;
+    private ObjectPool objectPool = null;
+    /**
+     * mappings from xml-tags to Viewable|AttributeDef
+     */
+    private HashMap tag2class = null;
 
-	@Override
-	public void init(TransferDescription td, Settings settings, IoxValidationConfig validationConfig,
-			ObjectPool objectPool, LogEventFactory logEventFactory) {
+    @Override
+    public void init(TransferDescription td, Settings settings, IoxValidationConfig validationConfig,
+            ObjectPool objectPool, LogEventFactory logEventFactory) {
 
-		tag2class = ch.interlis.iom_j.itf.ModelUtilities.getTagMap(td);
+        tag2class = ch.interlis.iom_j.itf.ModelUtilities.getTagMap(td);
 
-		logger = logEventFactory;
-		this.objectPool = objectPool;
-	}
+        logger = logEventFactory;
+        this.objectPool = objectPool;
+    }
 
-	@Override
-	public Value evaluate(String validationKind, String usageScope, IomObject mainObj, Value[] actualArguments) {
+    @Override
+    public Value evaluate(String validationKind, String usageScope, IomObject mainObj, Value[] actualArguments) {
+        /*
+        String currentObjectTag = mainObj.getobjecttag();
+        String geomAttr = actualArguments[1].getValue();
+        String geomType = getGeometryType(currentObjectTag, geomAttr);
+        double p = getPSurfaceOrAreaType(currentObjectTag, geomAttr);
 
-		String currentObjectTag = mainObj.getobjecttag();
-		String geomAttr = actualArguments[1].getValue();
-		String geomType = getGeometryType(currentObjectTag, geomAttr);
-		double p = getPSurfaceOrAreaType(currentObjectTag, geomAttr);
+        if (geomType != null) {
 
-		if (geomType != null) {
+            Geometry currentObjectGeometry = geometry2JTS(mainObj.getattrobj(geomAttr, 0), geomType, p);
+            logger.addEvent(logger.logInfoMsg("evaluate: " + getQualifiedIliName() + " Over: " + mainObj.getobjecttag()
+                    + " tid: " + mainObj.getobjectoid()));
 
-			Geometry currentObjectGeometry = geometry2JTS(mainObj.getattrobj(geomAttr, 0), geomType, p);
-			logger.addEvent(logger.logInfoMsg("evaluate: " + getQualifiedIliName() + " Over: " + mainObj.getobjecttag()
-					+ " tid: " + mainObj.getobjectoid()));
+            Boolean isValid = true;
+            for (String basketId : objectPool.getBasketIds()) {
+                // iterate through iomObjects
+                Iterator<IomObject> objectIterator = (objectPool.getObjectsOfBasketId(basketId)).valueIterator();
+                while (objectIterator.hasNext()) {
+                    IomObject iomObj = objectIterator.next();
+                    if (iomObj != null) {
+                        // do not evaluate itself
+                        if (iomObj.getobjecttag().equals(currentObjectTag) && !mainObj.equals(iomObj)) {
+                            Geometry iteratedPolygon = geometry2JTS(iomObj.getattrobj(geomAttr, 0), geomType, p);
 
-			Boolean isValid = true;
-			for (String basketId : objectPool.getBasketIds()) {
-				// iterate through iomObjects
-				Iterator<IomObject> objectIterator = (objectPool.getObjectsOfBasketId(basketId)).valueIterator();
-				while (objectIterator.hasNext()) {
-					IomObject iomObj = objectIterator.next();
-					if (iomObj != null) {
-						// do not evaluate itself
-						if (iomObj.getobjecttag().equals(currentObjectTag) && !mainObj.equals(iomObj)) {
-							Geometry iteratedPolygon = geometry2JTS(iomObj.getattrobj(geomAttr, 0), geomType, p);
+                            // check if mainObj overlaps any other object
+                            isValid &= !(currentObjectGeometry.overlaps(iteratedPolygon));
+                        }
+                    }
+                }
+            }
+            return new Value(isValid);
+        }
+        return new Value(false);
+        */
+        return  new Value(true);
+    }
 
-							// check if mainObj overlaps any other object
-							isValid &= !(currentObjectGeometry.overlaps(iteratedPolygon));
-						}
-					}
-				}
-			}
-			return new Value(isValid);
-		}
-		return new Value(false);
-	}
+    public String getGeometryType(String classTag, String geomAttribute) {
+        // get "actualArguments[1]" attribute geometry type
+        String geomType = null;
+        Object modelele = tag2class.get(classTag);
+        Viewable aclass1 = (Viewable) modelele;
+        Iterator iter = aclass1.getAttributes();
+        while (iter.hasNext()) {
+            LocalAttribute obj = (LocalAttribute) iter.next();
 
-	public String getGeometryType(String classTag, String geomAttribute) {
-		// get "actualArguments[1]" attribute geometry type
-		String geomType = null;
-		Object modelele = tag2class.get(classTag);
-		Viewable aclass1 = (Viewable) modelele;
-		Iterator iter = aclass1.getAttributes();
-		while (iter.hasNext()) {
-			LocalAttribute obj = (LocalAttribute) iter.next();
+            if (obj.getName().equals(geomAttribute)) {
+                Type type = obj.getDomainResolvingAliases();
+                System.out.println("********* " + type);
+                if (type instanceof PolylineType) {
+                    geomType = POLYLINE_TYPE;
+                } else if (type instanceof SurfaceOrAreaType) {
+                    geomType = SURFACE_OR_AREA_TYPE;
+                } else if (type instanceof CoordType) {
+                    geomType = COORD_TYPE;
+                } else {
+                    System.out.println("--------- " + obj.getMetaValues());
+                    logger.addEvent(
+                            logger.logErrorMsg("Given attribute " + geomAttribute + " is not a valid geometry type"));
+                    return null;
+                }
+            } else {
+                continue;
+            }
+        }
+        return geomType;
+    }
 
-			if (obj.getName().equals(geomAttribute)) {
-				Type type = obj.getDomainResolvingAliases();
+    public double getPSurfaceOrAreaType(String classTag, String geomAttribute) {
+        // get "actualArguments[1]" attribute geometry type
+        Object modelele = tag2class.get(classTag);
+        Viewable aclass1 = (Viewable) modelele;
+        Iterator iter = aclass1.getAttributes();
+        while (iter.hasNext()) {
+            LocalAttribute obj = (LocalAttribute) iter.next();
 
-				if (type instanceof PolylineType) {
-					geomType = POLYLINE_TYPE;
-				} else if (type instanceof SurfaceOrAreaType) {
-					geomType = SURFACE_OR_AREA_TYPE;
-				} else if (type instanceof CoordType) {
-					geomType = COORD_TYPE;
-				} else {
-					logger.addEvent(
-							logger.logErrorMsg("Given attribute " + geomAttribute + " is not a valid geometry type"));
-					return null;
-				}
-			} else {
-				continue;
-			}
-		}
-		return geomType;
-	}
+            if (obj.getName().equals(geomAttribute)) {
+                Type type = obj.getDomainResolvingAliases();
 
-	public double getPSurfaceOrAreaType(String classTag, String geomAttribute) {
-		// get "actualArguments[1]" attribute geometry type
-		Object modelele = tag2class.get(classTag);
-		Viewable aclass1 = (Viewable) modelele;
-		Iterator iter = aclass1.getAttributes();
-		while (iter.hasNext()) {
-			LocalAttribute obj = (LocalAttribute) iter.next();
+                if (type instanceof SurfaceOrAreaType) {
+                    if (typeCache.containsKey(type)) {
+                        return ((Double) typeCache.get((SurfaceOrAreaType) type)).doubleValue();
+                    }
+                    double p;
+                    CoordType coordType = (CoordType) ((SurfaceOrAreaType) type).getControlPointDomain().getType();
+                    NumericalType dimv[] = coordType.getDimensions();
+                    int accuracy = ((NumericType) dimv[0]).getMaximum().getAccuracy();
+                    if (accuracy == 0) {
+                        p = 0.5;
+                    } else {
+                        p = Math.pow(10.0, -accuracy);
+                    }
+                    typeCache.put((SurfaceOrAreaType) type, new Double(p));
+                    return p;
 
-			if (obj.getName().equals(geomAttribute)) {
-				Type type = obj.getDomainResolvingAliases();
+                } else {
+                    return 0;
+                }
+            } else {
+                continue;
+            }
+        }
+        return 0;
+    }
 
-				if (type instanceof SurfaceOrAreaType) {
-					if (typeCache.containsKey(type)) {
-						return ((Double) typeCache.get((SurfaceOrAreaType) type)).doubleValue();
-					}
-					double p;
-					CoordType coordType = (CoordType) ((SurfaceOrAreaType) type).getControlPointDomain().getType();
-					NumericalType dimv[] = coordType.getDimensions();
-					int accuracy = ((NumericType) dimv[0]).getMaximum().getAccuracy();
-					if (accuracy == 0) {
-						p = 0.5;
-					} else {
-						p = Math.pow(10.0, -accuracy);
-					}
-					typeCache.put((SurfaceOrAreaType) type, new Double(p));
-					return p;
+    public Geometry geometry2JTS(IomObject object, String geometryType, double p) {
+        Geometry geometry = null;
+        try {
+            switch (geometryType) {
+                case POLYLINE_TYPE:
+                    geometry = new GeometryFactory()
+                            .createLineString(Iox2jts.polyline2JTS(object, false, 0).toCoordinateArray());
+                    break;
+                case SURFACE_OR_AREA_TYPE:
+                    geometry = Iox2jts.surface2JTS(object, p);
+                    break;
+                case COORD_TYPE:
+                    geometry = new GeometryFactory().createPoint(Iox2jts.coord2JTS(object));
+                    break;
+            }
+        } catch (Iox2jtsException e1) {
+            logger.addEvent(logger.logErrorMsg(e1.getMessage()));
+            e1.printStackTrace();
+        }
+        return geometry;
+    }
 
-				} else {
-					return 0;
-				}
-			} else {
-				continue;
-			}
-		}
-		return 0;
-	}
+    private HashMap<LineType, Double> typeCache = new HashMap<LineType, Double>();
 
-	public Geometry geometry2JTS(IomObject object, String geometryType, double p) {
-		Geometry geometry = null;
-		try {
-			switch (geometryType) {
-			case POLYLINE_TYPE:
-				geometry = new GeometryFactory()
-						.createLineString(Iox2jts.polyline2JTS(object, false, 0).toCoordinateArray());
-				break;
-			case SURFACE_OR_AREA_TYPE:
-				geometry = Iox2jts.surface2JTS(object, p);
-				break;
-			case COORD_TYPE:
-				geometry = new GeometryFactory().createPoint(Iox2jts.coord2JTS(object));
-				break;
-			}
-		} catch (Iox2jtsException e1) {
-			logger.addEvent(logger.logErrorMsg(e1.getMessage()));
-			e1.printStackTrace();
-		}
-		return geometry;
-	}
+    public double getP(LineType type) {
+        if (typeCache.containsKey(type)) {
+            return ((Double) typeCache.get(type)).doubleValue();
+        }
+        double p;
+        CoordType coordType = (CoordType) type.getControlPointDomain().getType();
+        NumericalType dimv[] = coordType.getDimensions();
+        int accuracy = ((NumericType) dimv[0]).getMaximum().getAccuracy();
+        if (accuracy == 0) {
+            p = 0.5;
+        } else {
+            p = Math.pow(10.0, -accuracy);
+            // EhiLogger.debug("accuracy "+accuracy+", p "+p);
+        }
+        typeCache.put(type, new Double(p));
+        return p;
+    }
 
-	private HashMap<LineType, Double> typeCache = new HashMap<LineType, Double>();
-
-	public double getP(LineType type) {
-		if (typeCache.containsKey(type)) {
-			return ((Double) typeCache.get(type)).doubleValue();
-		}
-		double p;
-		CoordType coordType = (CoordType) type.getControlPointDomain().getType();
-		NumericalType dimv[] = coordType.getDimensions();
-		int accuracy = ((NumericType) dimv[0]).getMaximum().getAccuracy();
-		if (accuracy == 0) {
-			p = 0.5;
-		} else {
-			p = Math.pow(10.0, -accuracy);
-			// EhiLogger.debug("accuracy "+accuracy+", p "+p);
-		}
-		typeCache.put(type, new Double(p));
-		return p;
-	}
-
-	@Override
-	public String getQualifiedIliName() {
-		return "Catastro_COL_ES_V2_2_0.no_overlaps";
-	}
+    @Override
+    public String getQualifiedIliName() {
+        return "Catastro_Registro_Nucleo_V2_2_0.no_overlaps";
+    }
 
 }
