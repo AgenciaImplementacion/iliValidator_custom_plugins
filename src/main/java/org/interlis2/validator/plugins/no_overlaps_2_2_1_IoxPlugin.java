@@ -200,7 +200,7 @@ public class no_overlaps_2_2_1_IoxPlugin implements InterlisFunction {
 
     @Override
     public String getQualifiedIliName() {
-        return "Catastro_Registro_Nucleo_V2_2_1.no_overlaps";
+        return "Catastro_Registro_Nucleo_V2_2_1.no_overlaps_not_implemented";
     }
 
 }

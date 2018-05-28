@@ -22,6 +22,7 @@ import ch.interlis.ili2c.metamodel.TransferDescription;
 import ch.interlis.ili2c.metamodel.Type;
 import ch.interlis.ili2c.metamodel.Viewable;
 import ch.interlis.iom.IomObject;
+import ch.interlis.iox.IoxException;
 import ch.interlis.iox.IoxValidationConfig;
 import ch.interlis.iox_j.jts.Iox2jts;
 import ch.interlis.iox_j.jts.Iox2jtsException;
@@ -32,12 +33,19 @@ import ch.interlis.iox_j.validator.Value;
 import ch.interlis.iox_j.wkb.Iox2wkb;
 import ch.interlis.iox_j.wkb.Iox2wkbException;
 import com.vividsolutions.jts.geom.MultiPolygon;
+import com.vividsolutions.jts.geom.prep.PreparedGeometry;
+import com.vividsolutions.jts.geom.prep.PreparedGeometryFactory;
+import com.vividsolutions.jts.index.strtree.STRtree;
 import com.vividsolutions.jts.io.ParseException;
 import com.vividsolutions.jts.io.WKBReader;
+import java.util.LinkedHashMap;
+import java.util.List;
+import java.util.Map;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
 public class IntersectsIoxPlugin implements InterlisFunction {
+
     public static final String POLYLINE_TYPE = "PolylineType";
     public static final String SURFACE_OR_AREA_TYPE = "SurfaceOrAreaType";
     public static final String MULTI_SURFACE_TYPE = "MultiSurfaceType";
@@ -186,7 +194,6 @@ public class IntersectsIoxPlugin implements InterlisFunction {
 
     @Override
     public Value evaluate(String validationKind, String usageScope, IomObject mainObj, Value[] actualArguments) {
-
         IomObject xtfGeom = (IomObject) actualArguments[1].getComplexObjects().toArray()[0];
         String currentObjectTag = mainObj.getobjecttag();
         String geomAttr = null;
@@ -216,36 +223,41 @@ public class IntersectsIoxPlugin implements InterlisFunction {
 
             double p = getPSurfaceOrAreaType(currentObjectTag, geomAttr);
             Geometry currentObjectGeometry = geometry2JTS(xtfGeom, localAttr, geomType, p);
+            PreparedGeometry pg = PreparedGeometryFactory.prepare(currentObjectGeometry);
 
-            // check for self intersects
-            if (geomType.equals(MULTI_SURFACE_TYPE)) {
-                MultiPolygon mp = (MultiPolygon) currentObjectGeometry;
-                for (int i = 0; i < mp.getNumGeometries(); i++) {
-                    Geometry geometryA = mp.getGeometryN(i);
-                    for (int j = i + 1; j < mp.getNumGeometries(); j++) {
-                        Geometry geometryB = mp.getGeometryN(j);
+            TopologyCache tc = TopologyCache.getInstance(objectPool);
+            try {
+                tc.addCatalog(localAttr.getScopedName(), currentObjectTag, localAttr, geomType, p);
 
-                        spatialResult |= (geometryA.intersects(geometryB));
-
-                    }
-                }
-            }
-
-            // iterate through iomObjects
-            for (String basketId : objectPool.getBasketIds()) {
-                Iterator<IomObject> objectIterator = (objectPool.getObjectsOfBasketId(basketId)).valueIterator();
-                while (objectIterator.hasNext()) {
-                    IomObject iomObj = objectIterator.next();
-                    if (iomObj != null) {
-                        // do not evaluate itself
-                        if (iomObj.getobjecttag().equals(currentObjectTag) && !mainObj.equals(iomObj)) {
-                            Geometry iteratedPolygon = geometry2JTS(iomObj.getattrobj(geomAttr, 0), localAttr, geomType, p);
-
-                            // check if mainObj overlaps any other object
-                            spatialResult |= (currentObjectGeometry.intersects(iteratedPolygon));
+                // check for self intersects
+                if (geomType.equals(MULTI_SURFACE_TYPE)) {
+                    MultiPolygon mp = (MultiPolygon) currentObjectGeometry;
+                    for (int i = 0; i < mp.getNumGeometries(); i++) {
+                        Geometry geometryA = mp.getGeometryN(i);
+                        for (int j = i + 1; j < mp.getNumGeometries(); j++) {
+                            Geometry geometryB = mp.getGeometryN(j);
+                            spatialResult |= (geometryA.intersects(geometryB));
                         }
                     }
                 }
+
+                STRtree index = tc.getCatalog(localAttr.getScopedName());
+                if (index != null) {
+                    List a = index.query(currentObjectGeometry.getEnvelopeInternal());
+                    if (a != null) {
+                        for (int i = 0; i < a.size(); i++) {
+                            Map<String, Object> item = (Map<String, Object>) a.get(i);
+                            // do not evaluate itself
+                            if (item.get("id") != mainObj.getobjectoid()) {
+                                Geometry geom = (Geometry) item.get("geometry");
+                                spatialResult |= (pg.intersects(geom));
+                            }
+                        }
+                    }
+                }
+
+            } catch (IoxException ex) {
+                logger.addEvent(logger.logErrorMsg(ex.getMessage()));
             }
             return new Value(spatialResult);
         }
@@ -296,7 +308,7 @@ public class IntersectsIoxPlugin implements InterlisFunction {
                     return 0;
                 }
             } else {
-                
+
             }
         }
         return 0;
