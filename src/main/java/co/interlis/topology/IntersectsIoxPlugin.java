@@ -7,6 +7,7 @@ import com.vividsolutions.jts.geom.Geometry;
 import com.vividsolutions.jts.geom.GeometryFactory;
 
 import ch.ehi.basics.settings.Settings;
+import ch.ehi.ili2db.mapping.MultiSurfaceMapping;
 import ch.ehi.ili2db.mapping.MultiSurfaceMappings;
 import ch.interlis.ili2c.metamodel.AttributeDef;
 import ch.interlis.ili2c.metamodel.CompositionType;
@@ -38,7 +39,6 @@ import com.vividsolutions.jts.geom.prep.PreparedGeometryFactory;
 import com.vividsolutions.jts.index.strtree.STRtree;
 import com.vividsolutions.jts.io.ParseException;
 import com.vividsolutions.jts.io.WKBReader;
-import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.logging.Level;
@@ -141,7 +141,7 @@ public class IntersectsIoxPlugin implements InterlisFunction {
                     if (isMultiSurfaceAttr(transferDescription, attr)) {
                         MultiSurfaceMappings multiSurfaceAttrs = new MultiSurfaceMappings();
                         multiSurfaceAttrs.addMultiSurfaceAttr(attr);
-                        ch.ehi.ili2db.mapping.MultiSurfaceMapping attrMapping = multiSurfaceAttrs.getMapping(attr);
+                        MultiSurfaceMapping attrMapping = multiSurfaceAttrs.getMapping(attr);
 
                         IomObject iomMultisurface = null;
                         if (object != null) {
@@ -187,7 +187,7 @@ public class IntersectsIoxPlugin implements InterlisFunction {
                     break;
             }
         } catch (Iox2jtsException e1) {
-            logger.addEvent(logger.logErrorMsg(e1.getMessage()));
+            logger.addEvent(logger.logErrorMsg("aaaaaaaaaaaaaaaaa " + e1.getMessage()));
         }
         return geometry;
     }
@@ -227,6 +227,10 @@ public class IntersectsIoxPlugin implements InterlisFunction {
 
             TopologyCache tc = TopologyCache.getInstance(objectPool);
             try {
+                if(localAttr == null){
+                    logger.addEvent(logger.logErrorMsg("Local attribute not defined"));
+                    return null;
+                }
                 tc.addCatalog(localAttr.getScopedName(), currentObjectTag, localAttr, geomType, p);
 
                 // check for self intersects

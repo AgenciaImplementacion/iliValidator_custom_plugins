@@ -226,6 +226,10 @@ public class TouchesIoxPlugin implements InterlisFunction {
 
             TopologyCache tc = TopologyCache.getInstance(objectPool);
             try {
+                if(localAttr == null){
+                    logger.addEvent(logger.logErrorMsg("Local attribute not defined"));
+                    return null;
+                }
                 tc.addCatalog(localAttr.getScopedName(), currentObjectTag, localAttr, geomType, p);
 
                 // check for self touches

@@ -28,11 +28,11 @@
             <artifactId>ilivalidator</artifactId>
             <version>1.8.1</version>
         </dependency>
-        <dependency>
+<!--        <dependency>
             <groupId>ch.interlis</groupId>
             <artifactId>ili2pg</artifactId>
             <version>3.11.3</version>
-        </dependency>
+        </dependency>-->
         
         <!-- https://mvnrepository.com/artifact/com.fasterxml.jackson.core/jackson-databind -->
         <dependency>
